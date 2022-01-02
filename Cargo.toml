@@ -7,6 +7,7 @@ description = "A snake clone game using WASM-4 engine"
 version = "1.0.1"
 edition = "2021"
 publish = false
+repository = "https://github.com/pascalruscher/wasm4_snake"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [lib]
