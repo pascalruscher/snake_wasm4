@@ -13,12 +13,7 @@ repository = "https://github.com/pascalruscher/wasm4_snake"
 [lib]
 crate-type = ["cdylib"]
 
-[package.metadata.docs.rs]
-all-features = true
-
 [dependencies]
-wasm-bindgen = "0.2"
-buddy-alloc = { version = "0.4.1", optional = true }
 
 [profile.dev]
 panic = "abort"
@@ -27,7 +22,3 @@ panic = "abort"
 opt-level = "z"
 lto = true
 panic = "abort"
-
-[features]
-# use `--no-default-features` or comment out next line to disable allocator
-default = ["buddy-alloc"]

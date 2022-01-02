@@ -1,6 +1,4 @@
 #![no_std]
-#[cfg(feature = "buddy-alloc")]
-mod alloc;
 mod wasm4;
 
 use core::panic::PanicInfo;
@@ -9,6 +7,7 @@ use wasm4::*;
 
 #[panic_handler]
 fn panic(_panic_info: &PanicInfo) -> ! {
+    trace("Panic!");
     loop {}
 }
 
@@ -68,7 +67,7 @@ impl Snake {
             if i == 0 {
                 let mut x = self.body[i].x - self.direction.x;
                 let mut y = self.body[i].y - self.direction.y;
-                let max = (RESOLUTION / SPRITE_SIZE) as i8 - 1;
+                let max = (SCREEN_SIZE / SPRITE_SIZE) as i8 - 1;
                 // If snake moves out of the "game area" set its position to the opposite side
                 if x < 0 {
                     x = max;
@@ -216,7 +215,7 @@ impl Game {
     }
 
     pub fn place_random_fruit(&mut self) {
-        let max_col_row = (RESOLUTION / SPRITE_SIZE) as i8;
+        let max_col_row = (SCREEN_SIZE / SPRITE_SIZE) as i8;
         let mut available_locations: [Point; get_max_points() as usize] =
             [Point::new(-1, -1); get_max_points() as usize];
         // We do not want wo place the fruit on the snake so we gather all available locations
@@ -241,8 +240,7 @@ impl Game {
     }
 }
 
-const RESOLUTION: u8 = 160;
-const SPRITE_SIZE: u8 = 8;
+const SPRITE_SIZE: u32 = 8;
 static mut GAME: Game = Game::new();
 
 #[no_mangle]
@@ -312,7 +310,7 @@ fn set_draw_colors(color: u16) {
 }
 
 const fn get_max_points() -> u32 {
-    ((RESOLUTION / SPRITE_SIZE) as u32).pow(2)
+    ((SCREEN_SIZE / SPRITE_SIZE) as u32).pow(2)
 }
 
 fn int_to_utf8(mut num: u16) -> [u8; 3] {
