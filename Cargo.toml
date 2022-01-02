@@ -4,7 +4,7 @@ authors = ["Pascal Ruscher <ruscher.pascal@gmail.com>"]
 keywords = ["game", "wasm-4"]
 categories = ["games"]
 description = "A snake clone game using WASM-4 engine"
-version = "1.0.0"
+version = "1.0.1"
 edition = "2021"
 publish = false
 
@@ -14,8 +14,6 @@ crate-type = ["cdylib"]
 
 [dependencies]
 buddy-alloc = { version = "0.4.1", optional = true }
-fastrand = "1.6.0"
-lazy_static = "1.4.0"
 
 [profile.release]
 opt-level = "z"

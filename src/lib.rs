@@ -2,9 +2,6 @@
 mod alloc;
 mod wasm4;
 
-use fastrand::Rng;
-use lazy_static::lazy_static;
-use std::sync::Mutex;
 use wasm4::*;
 
 #[derive(Clone, Copy)]
@@ -195,8 +192,6 @@ impl Game {
     pub fn check_fruit_collision(&mut self) -> bool {
         let mut collision = false;
         if self.snake.body[0].equals(self.fruit.location) {
-            self.fruit.location = get_random_location(self.frame_count);
-            self.fruit_count += 1;
             collision = true;
         }
         collision
@@ -213,26 +208,43 @@ impl Game {
     }
 
     pub fn place_random_fruit(&mut self) {
-        self.fruit.location = get_random_location(self.frame_count);
+        let max_col_row = (RESOLUTION / SPRITE_SIZE) as i8;
+        let mut available_locations: Vec<Point> = Vec::new();
+        // We do not want wo place the fruit on the snake so we gather all available locations
+        // that do not have a body part of the
+        for y in 0..max_col_row {
+            for x in 0..max_col_row {
+                if self
+                    .snake
+                    .body
+                    .iter()
+                    .find(|v| v.x == x && v.y == y)
+                    .is_some()
+                {
+                    continue;
+                }
+                available_locations.push(Point::new(x, y));
+            }
+        }
+        self.fruit.location = get_random_location(self.frame_count, available_locations);
     }
 }
 
 const RESOLUTION: u8 = 160;
 const SPRITE_SIZE: u8 = 8;
-
-lazy_static! {
-    static ref GAME: Mutex<Game> = Mutex::new(Game::new());
-}
+static mut GAME: Game = Game::new();
 
 #[no_mangle]
 fn start() {
     set_palette();
-    GAME.lock().unwrap().place_random_fruit();
+    unsafe {
+        GAME.place_random_fruit();
+    }
 }
 
 #[no_mangle]
 fn update() {
-    let mut game = GAME.lock().unwrap();
+    let mut game = unsafe { &mut GAME };
     let game_over = game.check_snake_collision();
     if game_over {
         set_draw_colors(0x4);
@@ -245,16 +257,21 @@ fn update() {
         if game.frame_count % 15 == 0 {
             let food_collision = game.check_fruit_collision();
             game.snake.update(food_collision);
+            if food_collision {
+                game.place_random_fruit();
+                game.fruit_count += 1;
+            }
             game.processing_input = false;
         }
         game.snake.draw();
     }
 }
 
-fn get_random_location(frame_count: u32) -> Point {
-    let rng = Rng::with_seed(frame_count.into());
-    let max_col_row = (RESOLUTION / SPRITE_SIZE) as i8;
-    Point::new(rng.i8(0..max_col_row), rng.i8(0..max_col_row))
+fn get_random_location(frame_count: u32, available_locations: Vec<Point>) -> Point {
+    // It is just a simple random number generation depending on the frame_count
+    // for this game it is good enough
+    let rng = (frame_count * frame_count + 32415412) % available_locations.len() as u32;
+    return *available_locations.get(rng as usize).unwrap();
 }
 
 fn get_gamepad() -> u8 {
