@@ -1,8 +1,16 @@
+#![no_std]
 #[cfg(feature = "buddy-alloc")]
 mod alloc;
 mod wasm4;
 
+use core::panic::PanicInfo;
+use core::str;
 use wasm4::*;
+
+#[panic_handler]
+fn panic(_panic_info: &PanicInfo) -> ! {
+    loop {}
+}
 
 #[derive(Clone, Copy)]
 pub struct Point {
@@ -209,9 +217,11 @@ impl Game {
 
     pub fn place_random_fruit(&mut self) {
         let max_col_row = (RESOLUTION / SPRITE_SIZE) as i8;
-        let mut available_locations: Vec<Point> = Vec::new();
+        let mut available_locations: [Point; get_max_points() as usize] =
+            [Point::new(-1, -1); get_max_points() as usize];
         // We do not want wo place the fruit on the snake so we gather all available locations
         // that do not have a body part of the
+        let mut i = 0;
         for y in 0..max_col_row {
             for x in 0..max_col_row {
                 if self
@@ -223,10 +233,11 @@ impl Game {
                 {
                     continue;
                 }
-                available_locations.push(Point::new(x, y));
+                available_locations[i] = Point::new(x, y);
+                i += 1;
             }
         }
-        self.fruit.location = get_random_location(self.frame_count, available_locations);
+        self.fruit.location = get_random_location(self.frame_count, &available_locations);
     }
 }
 
@@ -249,7 +260,9 @@ fn update() {
     if game_over {
         set_draw_colors(0x4);
         text("Game Over!", 44, 60);
-        text(format!("Score: {}", game.fruit_count), 44, 74);
+        text("Score: ", 44, 74);
+        let score = int_to_utf8(game.fruit_count);
+        text(str::from_utf8(&score).unwrap(), 96, 74);
     } else {
         game.update();
         game.input();
@@ -267,11 +280,23 @@ fn update() {
     }
 }
 
-fn get_random_location(frame_count: u32, available_locations: Vec<Point>) -> Point {
+fn get_random_location(
+    frame_count: u32,
+    available_locations: &[Point; get_max_points() as usize],
+) -> Point {
     // It is just a simple random number generation depending on the frame_count
     // for this game it is good enough
-    let rng = (frame_count * frame_count + 32415412) % available_locations.len() as u32;
-    return *available_locations.get(rng as usize).unwrap();
+    let mut rng = (frame_count * frame_count + 32415412) % available_locations.len() as u32;
+    loop {
+        if available_locations[rng as usize].x > -1 && available_locations[rng as usize].y > -1 {
+            return available_locations[rng as usize];
+        }
+        if rng == (available_locations.len() - 1) as u32 {
+            rng = 0;
+        } else {
+            rng += 1;
+        }
+    }
 }
 
 fn get_gamepad() -> u8 {
@@ -288,4 +313,17 @@ fn set_draw_colors(color: u16) {
 
 const fn get_max_points() -> u32 {
     ((RESOLUTION / SPRITE_SIZE) as u32).pow(2)
+}
+
+fn int_to_utf8(mut num: u16) -> [u8; 3] {
+    let base = 0x10;
+    let mut digit = 0;
+    let mut utf8_chars: [u8; 3] = [0x30; 3];
+    while num != 0 {
+        digit += 1;
+        let utf8 = (num % base) as u8 + 0x30;
+        utf8_chars[3 - digit] = utf8;
+        num /= base;
+    }
+    utf8_chars
 }
